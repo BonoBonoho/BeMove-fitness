@@ -19,7 +19,7 @@ import AdminDashboard from './components/AdminDashboard';
 import { auth, db } from './firebase';
 import { onAuthStateChanged, signOut } from 'firebase/auth';
 import { doc, getDoc } from 'firebase/firestore';
-import { Loader2, AlertTriangle } from 'lucide-react';
+import { Loader2, AlertTriangle, ShieldCheck } from 'lucide-react';
 
 // --- MOCK DATA ---
 // Assigned 'u2' (강철우 Trainer) to some members for demo
@@ -364,6 +364,11 @@ const App: React.FC = () => {
                  </div>
              )}
             <LoginScreen onDemoLogin={handleDemoLogin} />
+            
+            {/* Version Footer */}
+            <div className="fixed bottom-2 right-2 text-xs text-gray-400 flex items-center gap-1 opacity-50 hover:opacity-100 transition">
+               <ShieldCheck size={12}/> BE MOVE v2.0 (Stable)
+            </div>
         </div>
     );
   }
