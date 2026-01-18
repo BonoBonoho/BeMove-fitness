@@ -1,59 +1,64 @@
 
-import { initializeApp } from "firebase/app";
-import { getAuth, GoogleAuthProvider } from "firebase/auth";
-import { getFirestore } from "firebase/firestore";
+import { initializeApp, FirebaseApp } from "firebase/app";
+import { getAuth, GoogleAuthProvider, Auth } from "firebase/auth";
+import { getFirestore, Firestore } from "firebase/firestore";
 
 // Helper function to safely get environment variables
-// This prevents "ReferenceError: process is not defined" in browser environments
 const getEnv = (key: string) => {
+  try {
+    // @ts-ignore
+    if (typeof import.meta !== 'undefined' && import.meta.env) {
+      // @ts-ignore
+      return import.meta.env[key] || import.meta.env[`VITE_${key}`];
+    }
+  } catch (e) {}
+  
   try {
     // @ts-ignore
     if (typeof process !== 'undefined' && process.env) {
       // @ts-ignore
       return process.env[key];
     }
-  } catch (e) {
-    // Ignore errors accessing process
-  }
-  try {
-    // Check for Vite-style env vars
-    // @ts-ignore
-    if (typeof import.meta !== 'undefined' && import.meta.env) {
-      // @ts-ignore
-      return import.meta.env[key] || import.meta.env[`VITE_${key}`];
-    }
-  } catch (e) {
-    // Ignore errors
-  }
+  } catch (e) {}
+  
   return undefined;
 };
 
-// Your web app's Firebase configuration
-// NOTE: If running in a browser without a build step, replace the fallback strings with your actual keys.
+// ------------------------------------------------------------------
+// [중요] 여기에 선생님의 Firebase 설정값을 직접 입력하거나, 
+// .env 파일을 통해 환경변수가 제대로 로드되는지 확인해야 합니다.
+// 빌드 과정에서 환경변수가 누락되면 앱이 실행되지 않을 수 있습니다.
+// ------------------------------------------------------------------
 const firebaseConfig = {
-  apiKey: getEnv("REACT_APP_FIREBASE_API_KEY") || "AIzaSy_PLACEHOLDER_KEY_FOR_DEMO",
+  apiKey: getEnv("REACT_APP_FIREBASE_API_KEY") || "AIzaSy_PLACEHOLDER", 
   authDomain: getEnv("REACT_APP_FIREBASE_AUTH_DOMAIN") || "demo-project.firebaseapp.com",
   projectId: getEnv("REACT_APP_FIREBASE_PROJECT_ID") || "demo-project",
   storageBucket: getEnv("REACT_APP_FIREBASE_STORAGE_BUCKET") || "demo-project.appspot.com",
   messagingSenderId: getEnv("REACT_APP_FIREBASE_MESSAGING_SENDER_ID") || "123456789",
-  appId: getEnv("REACT_APP_FIREBASE_APP_ID") || "1:123456789:web:abcdef123456"
+  appId: getEnv("REACT_APP_FIREBASE_APP_ID") || "1:123456789:web:abcdef"
 };
 
-// Log warning if running with placeholder keys
-if (firebaseConfig.apiKey.includes("PLACEHOLDER")) {
-  console.warn(
-    "%c Firebase Configuration Missing ", 
-    "background: #222; color: #bada55; font-size: 16px; padding: 4px;",
-    "\nPlease update firebase.ts with your actual Firebase config keys to enable Login."
-  );
+let app: FirebaseApp;
+let auth: Auth;
+let db: Firestore;
+let googleProvider: GoogleAuthProvider;
+
+try {
+  // Initialize Firebase
+  app = initializeApp(firebaseConfig);
+  auth = getAuth(app);
+  db = getFirestore(app);
+  googleProvider = new GoogleAuthProvider();
+} catch (error) {
+  console.error("Firebase Initialization Error:", error);
+  console.error("Please check your firebaseConfig in firebase.ts");
+  // Prevent crash by assigning dummy objects if init fails
+  // This allows the UI to render an error message instead of white screen
+  app = {} as FirebaseApp;
+  auth = {} as Auth;
+  db = {} as Firestore;
+  googleProvider = new GoogleAuthProvider();
 }
 
-// Initialize Firebase
-const app = initializeApp(firebaseConfig);
-
-// Initialize Services
-export const auth = getAuth(app);
-export const db = getFirestore(app);
-export const googleProvider = new GoogleAuthProvider();
-
+export { auth, db, googleProvider };
 export default app;

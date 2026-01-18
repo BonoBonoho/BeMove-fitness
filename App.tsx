@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { 
   Member, 
@@ -8,7 +7,6 @@ import {
   Schedule,
   Transaction,
   User,
-  UserRole,
   BranchTargetMap,
   SurveyResult,
   Equipment
@@ -21,7 +19,7 @@ import AdminDashboard from './components/AdminDashboard';
 import { auth, db } from './firebase';
 import { onAuthStateChanged, signOut } from 'firebase/auth';
 import { doc, getDoc } from 'firebase/firestore';
-import { Loader2 } from 'lucide-react';
+import { Loader2, AlertTriangle } from 'lucide-react';
 
 // --- MOCK DATA ---
 // Assigned 'u2' (강철우 Trainer) to some members for demo
@@ -169,7 +167,8 @@ const INITIAL_SURVEY_RESULTS: SurveyResult[] = [
 const App: React.FC = () => {
   // --- Global State ---
   const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true); // Initial loading state for Firebase Auth
+  const [loading, setLoading] = useState(true); 
+  const [initError, setInitError] = useState(false);
 
   const [members, setMembers] = useState<Member[]>(MOCK_MEMBERS);
   const [schedules, setSchedules] = useState<Schedule[]>(MOCK_SCHEDULES);
@@ -190,36 +189,52 @@ const App: React.FC = () => {
 
   // --- Firebase Auth Listener ---
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
-      if (firebaseUser) {
-        // User is signed in, fetch additional data from Firestore
-        try {
-          const userDoc = await getDoc(doc(db, "users", firebaseUser.uid));
-          if (userDoc.exists()) {
-            const userData = userDoc.data() as User;
-            // Merge Firebase auth data with Firestore data
-            setUser({ ...userData, id: firebaseUser.uid });
-          } else {
-            // Fallback if doc doesn't exist (should happen only during registration edge cases)
-            console.error("User document not found in Firestore");
-            setUser(null);
-          }
-        } catch (error) {
-          console.error("Error fetching user data:", error);
-          setUser(null);
+    let unsubscribe: () => void;
+    
+    // Safety timeout: If Firebase fails to init, stop loading so user can at least see Login (Demo)
+    const safetyTimer = setTimeout(() => {
+        if (loading) {
+            console.warn("Firebase init timed out or failed. Showing login screen.");
+            setLoading(false);
+            setInitError(true);
         }
-      } else {
-        // User is signed out, but check if we manually set a demo user before clearing
-        // Note: onAuthStateChanged fires on init. We need to respect manual demo login.
-        // If we are in demo mode, user will be set manually.
-        // This effect will run once with null on init if not logged in.
-        // We only clear if we are NOT in demo mode (which we can't easily track without extra state, 
-        // but for this simple app, we just let manual setUser take precedence after init).
-      }
-      setLoading(false);
-    });
+    }, 2500);
 
-    return () => unsubscribe();
+    try {
+        if (auth) {
+            unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+                clearTimeout(safetyTimer);
+                if (firebaseUser) {
+                    try {
+                        const userDoc = await getDoc(doc(db, "users", firebaseUser.uid));
+                        if (userDoc.exists()) {
+                            const userData = userDoc.data() as User;
+                            setUser({ ...userData, id: firebaseUser.uid });
+                        } else {
+                            setUser(null);
+                        }
+                    } catch (error) {
+                        console.error("Error fetching user data:", error);
+                        setUser(null);
+                    }
+                }
+                setLoading(false);
+            });
+        } else {
+             // Auth not initialized (likely due to missing config in firebase.ts)
+             throw new Error("Auth service not available");
+        }
+    } catch (e) {
+        console.error("Firebase Auth Error:", e);
+        // Fallback to allow demo login
+        setLoading(false);
+        setInitError(true);
+    }
+
+    return () => {
+        if (unsubscribe) unsubscribe();
+        clearTimeout(safetyTimer);
+    };
   }, []);
 
   // --- Helper: Get Target for a specific user ---
@@ -307,11 +322,10 @@ const App: React.FC = () => {
 
   const handleLogout = async () => {
     try {
-        await signOut(auth);
+        if (auth) await signOut(auth);
         setUser(null);
     } catch (error) {
         console.error("Logout Error:", error);
-        // Even if firebase fails, clear local state
         setUser(null);
     }
   };
@@ -341,7 +355,17 @@ const App: React.FC = () => {
   }
 
   if (!user) {
-    return <LoginScreen onDemoLogin={handleDemoLogin} />;
+    return (
+        <div className="relative">
+             {initError && (
+                 <div className="bg-orange-100 text-orange-800 p-2 text-center text-xs font-bold fixed top-0 w-full z-50 flex justify-center items-center gap-2">
+                     <AlertTriangle size={14}/>
+                     Firebase 설정이 올바르지 않아 '데모 모드'만 사용 가능합니다.
+                 </div>
+             )}
+            <LoginScreen onDemoLogin={handleDemoLogin} />
+        </div>
+    );
   }
 
   // Calculate current month's stats for dashboards
