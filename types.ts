@@ -57,6 +57,7 @@ export interface User {
 export interface Member {
   id: string;
   name: string;
+  trainerId?: string; // Assigned Trainer ID
   phoneNumber: string; 
   age: number;
   gender: 'male' | 'female';

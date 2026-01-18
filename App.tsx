@@ -24,30 +24,31 @@ import { doc, getDoc } from 'firebase/firestore';
 import { Loader2 } from 'lucide-react';
 
 // --- MOCK DATA ---
+// Assigned 'u2' (강철우 Trainer) to some members for demo
 const MOCK_MEMBERS: Member[] = [
   { 
-    id: '1', name: '김민수', age: 28, gender: 'male', phoneNumber: '010-1234-5678', joinDate: '2025-01-15', 
+    id: '1', name: '김민수', trainerId: 'u2', age: 28, gender: 'male', phoneNumber: '010-1234-5678', joinDate: '2025-01-15', 
     profileImage: 'https://picsum.photos/200/200?random=1', 
     goal: '바디프로필 촬영 및 체지방 10% 달성', status: 'active',
     totalSessions: 30, usedSessions: 22, monthlySessionCount: 12, behavioralStage: 'Action',
     paymentAmount: 1500000, source: 'WalkIn'
   },
   { 
-    id: '2', name: '이지은', age: 34, gender: 'female', phoneNumber: '010-9876-5432', joinDate: '2025-02-20', 
+    id: '2', name: '이지은', trainerId: 'u2', age: 34, gender: 'female', phoneNumber: '010-9876-5432', joinDate: '2025-02-20', 
     profileImage: 'https://picsum.photos/200/200?random=2', 
     goal: '체력 증진 및 라운드 숄더 교정', status: 'active',
     totalSessions: 20, usedSessions: 5, monthlySessionCount: 4, behavioralStage: 'Preparation',
     paymentAmount: 1100000, source: 'Referral'
   },
   { 
-    id: '3', name: '박준형', age: 41, gender: 'male', phoneNumber: '010-5555-7777', joinDate: '2024-12-10', 
+    id: '3', name: '박준형', trainerId: 'u3', age: 41, gender: 'male', phoneNumber: '010-5555-7777', joinDate: '2024-12-10', 
     profileImage: 'https://picsum.photos/200/200?random=3', 
     goal: '골프 비거리 향상을 위한 코어 운동', status: 'inactive',
     totalSessions: 50, usedSessions: 48, monthlySessionCount: 2, behavioralStage: 'Maintenance',
     paymentAmount: 2200000, source: 'OT'
   },
   { 
-    id: '4', name: '최서연', age: 25, gender: 'female', phoneNumber: '010-1111-2222', joinDate: '2024-11-05', 
+    id: '4', name: '최서연', trainerId: 'u2', age: 25, gender: 'female', phoneNumber: '010-1111-2222', joinDate: '2024-11-05', 
     profileImage: 'https://picsum.photos/200/200?random=4', 
     goal: '다이어트 -5kg 감량', status: 'active',
     totalSessions: 10, usedSessions: 2, monthlySessionCount: 8, behavioralStage: 'Contemplation',
@@ -208,8 +209,12 @@ const App: React.FC = () => {
           setUser(null);
         }
       } else {
-        // User is signed out
-        setUser(null);
+        // User is signed out, but check if we manually set a demo user before clearing
+        // Note: onAuthStateChanged fires on init. We need to respect manual demo login.
+        // If we are in demo mode, user will be set manually.
+        // This effect will run once with null on init if not logged in.
+        // We only clear if we are NOT in demo mode (which we can't easily track without extra state, 
+        // but for this simple app, we just let manual setUser take precedence after init).
       }
       setLoading(false);
     });
@@ -306,6 +311,8 @@ const App: React.FC = () => {
         setUser(null);
     } catch (error) {
         console.error("Logout Error:", error);
+        // Even if firebase fails, clear local state
+        setUser(null);
     }
   };
 
@@ -314,6 +321,11 @@ const App: React.FC = () => {
     if (user && user.id === updatedUser.id) {
         setUser(updatedUser);
     }
+  };
+
+  // --- Demo Login Handler ---
+  const handleDemoLogin = (demoUser: User) => {
+      setUser(demoUser);
   };
 
   // --- Router Logic ---
@@ -329,7 +341,7 @@ const App: React.FC = () => {
   }
 
   if (!user) {
-    return <LoginScreen />;
+    return <LoginScreen onDemoLogin={handleDemoLogin} />;
   }
 
   // Calculate current month's stats for dashboards
@@ -401,6 +413,10 @@ const App: React.FC = () => {
   }
 
   // Trainer Dashboard Logic
+  // Filter members to only show those assigned to this trainer (or new unassigned ones if needed)
+  // For this demo, we assume trainers only see their own assigned members + any unassigned members
+  const myMembers = members.filter(m => m.trainerId === user.id || !m.trainerId);
+
   // Calculate specific revenue for this trainer
   const personalRevenue = user.name === '강철우' 
     ? transactions.filter(t => t.date.startsWith(currentMonth)).reduce((sum, t) => sum + t.amount, 0) * 0.6
@@ -412,15 +428,15 @@ const App: React.FC = () => {
     <TrainerDashboard
       user={user}
       onLogout={handleLogout}
-      members={members}
+      members={myMembers} // PASS FILTERED MEMBERS
       setMembers={setMembers}
-      schedules={schedules}
+      schedules={schedules.filter(s => myMembers.map(m=>m.id).includes(s.memberId))}
       setSchedules={setSchedules}
-      dietEntries={dietEntries}
+      dietEntries={dietEntries.filter(d => myMembers.map(m=>m.id).includes(d.memberId))}
       setDietEntries={setDietEntries}
-      inBodyEntries={inBodyEntries}
+      inBodyEntries={inBodyEntries.filter(i => myMembers.map(m=>m.id).includes(i.memberId))}
       setInBodyEntries={setInBodyEntries}
-      workoutEntries={workoutEntries}
+      workoutEntries={workoutEntries.filter(w => myMembers.map(m=>m.id).includes(w.memberId))}
       setWorkoutEntries={setWorkoutEntries}
       transactions={transactions}
       setTransactions={setTransactions}
@@ -428,7 +444,7 @@ const App: React.FC = () => {
       monthlyRevenue={personalRevenue}
       monthlyTarget={personalTarget}
       // Survey
-      surveyResults={surveyResults}
+      surveyResults={surveyResults.filter(s => s.trainerId === user.id)}
       onAddSurveyResult={handleAddSurveyResult}
       // Equipment
       equipmentList={equipmentList}
