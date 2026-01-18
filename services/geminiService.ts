@@ -1,7 +1,32 @@
 
 import { GoogleGenAI } from "@google/genai";
 
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+// Helper to safely access env vars in various environments (Vite, Node, etc.)
+const getEnv = (key: string) => {
+  try {
+    // Check for Vite-style env vars
+    // @ts-ignore
+    if (typeof import.meta !== 'undefined' && import.meta.env) {
+      // @ts-ignore
+      return import.meta.env[key] || import.meta.env[`VITE_${key}`];
+    }
+  } catch (e) {}
+  
+  try {
+    // Check for Node-style env vars (process.env)
+    // @ts-ignore
+    if (typeof process !== 'undefined' && process.env) {
+      // @ts-ignore
+      return process.env[key];
+    }
+  } catch (e) {}
+  
+  return undefined;
+};
+
+// Initialize with safe key retrieval. If no key is found, it won't crash the app immediately.
+const apiKey = getEnv('API_KEY') || "";
+const ai = new GoogleGenAI({ apiKey });
 
 export const analyzeFoodImage = async (base64Image: string): Promise<{
   calories: number;
