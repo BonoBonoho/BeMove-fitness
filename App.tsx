@@ -389,6 +389,12 @@ const App: React.FC = () => {
         branchTargets={branchTargets}
         onUpdateTargets={handleUpdateTargets}
         surveyResults={surveyResults}
+        // Equipment Props
+        equipmentList={equipmentList}
+        setEquipmentList={setEquipmentList}
+        pendingEquipment={pendingEquipment}
+        onApproveEquipment={handleApproveEquipment}
+        onRejectEquipment={handleRejectEquipment}
       />
     );
   }

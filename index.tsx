@@ -3,7 +3,7 @@ import ReactDOM from 'react-dom/client';
 import App from './App';
 
 interface Props {
-  children: ReactNode;
+  children?: ReactNode;
 }
 
 interface State {
@@ -12,20 +12,15 @@ interface State {
 }
 
 // Error Boundary Component
-// This catches JavaScript errors anywhere in the child component tree,
-// log those errors, and display a fallback UI instead of the component tree that crashed.
+// 앱이 예상치 못한 에러로 중단되었을 때, 흰 화면 대신 안내 문구를 보여줍니다.
 class ErrorBoundary extends Component<Props, State> {
   public state: State = { hasError: false, error: null };
 
-  constructor(props: Props) {
-    super(props);
-  }
-
-  static getDerivedStateFromError(error: Error): State {
+  public static getDerivedStateFromError(error: Error): State {
     return { hasError: true, error };
   }
 
-  componentDidCatch(error: Error, errorInfo: ErrorInfo) {
+  public componentDidCatch(error: Error, errorInfo: ErrorInfo) {
     console.error("Uncaught error:", error, errorInfo);
   }
 
@@ -33,20 +28,18 @@ class ErrorBoundary extends Component<Props, State> {
     if (this.state.hasError) {
       return (
         <div style={{ padding: '2rem', fontFamily: 'sans-serif', textAlign: 'center', marginTop: '10%' }}>
-          <h1 style={{ color: '#e11d48' }}>앱 실행 중 오류가 발생했습니다.</h1>
-          <p>아래 오류 내용을 확인해주세요:</p>
-          <pre style={{ background: '#f1f5f9', padding: '1rem', borderRadius: '8px', overflowX: 'auto', textAlign: 'left', maxWidth: '600px', margin: '1rem auto' }}>
+          <h1 style={{ color: '#e11d48', marginBottom: '1rem' }}>앱 실행 중 문제가 발생했습니다.</h1>
+          <p style={{ color: '#64748b', marginBottom: '1rem' }}>
+            아래 오류 내용을 확인해주세요.
+          </p>
+          <pre style={{ background: '#f1f5f9', padding: '1rem', borderRadius: '8px', overflowX: 'auto', textAlign: 'left', maxWidth: '600px', margin: '0 auto 1.5rem auto', fontSize: '0.9rem' }}>
             {this.state.error?.toString()}
           </pre>
-          <p style={{ color: '#64748b' }}>
-            Firebase 설정(API Key)이 올바르지 않거나 환경 변수 설정 문제일 수 있습니다.<br/>
-            <code>firebase.ts</code> 파일을 확인해주세요.
-          </p>
           <button 
             onClick={() => window.location.reload()}
-            style={{ padding: '0.5rem 1rem', background: '#4f46e5', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', marginTop: '1rem' }}
+            style={{ padding: '0.75rem 1.5rem', background: '#4f46e5', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold' }}
           >
-            새로고침
+            앱 새로고침
           </button>
         </div>
       );
@@ -56,16 +49,18 @@ class ErrorBoundary extends Component<Props, State> {
   }
 }
 
+// 'root' 요소를 안전하게 가져오고, 없을 경우 에러를 출력합니다.
 const rootElement = document.getElementById('root');
-if (!rootElement) {
-  throw new Error("Could not find root element to mount to");
-}
 
-const root = ReactDOM.createRoot(rootElement);
-root.render(
-  <React.StrictMode>
-    <ErrorBoundary>
-      <App />
-    </ErrorBoundary>
-  </React.StrictMode>
-);
+if (rootElement) {
+  const root = ReactDOM.createRoot(rootElement);
+  root.render(
+    <React.StrictMode>
+      <ErrorBoundary>
+        <App />
+      </ErrorBoundary>
+    </React.StrictMode>
+  );
+} else {
+  console.error("Failed to find the root element. index.html 파일에 <div id='root'></div>가 있는지 확인해주세요.");
+}

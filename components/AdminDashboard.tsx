@@ -1,6 +1,5 @@
-
 import React, { useState } from 'react';
-import { User, UserRole, Member, Transaction, BranchTargetMap, SurveyResult } from '../types';
+import { User, UserRole, Member, Transaction, BranchTargetMap, SurveyResult, Equipment } from '../types';
 import { LogOut, Users, MapPin, TrendingUp, Shield, Edit2, Check, X, Building2, Plus, Trash2, Settings, DollarSign, Star, LayoutDashboard, ArrowLeft } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LabelList } from 'recharts';
 import ManagerDashboard from './ManagerDashboard';
@@ -23,6 +22,12 @@ interface AdminDashboardProps {
   onUpdateTargets: (branch: string, position: string, amount: number) => void;
   // Survey
   surveyResults?: SurveyResult[];
+  // Equipment
+  equipmentList: Equipment[];
+  setEquipmentList: React.Dispatch<React.SetStateAction<Equipment[]>>;
+  pendingEquipment?: string[];
+  onApproveEquipment?: (name: string, category: Equipment['category']) => void;
+  onRejectEquipment?: (name: string) => void;
 }
 
 const POSITIONS = [
@@ -40,7 +45,8 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
   user, onLogout, staffList, onUpdateStaff, allMembers, allTransactions,
   branches, onAddBranch, onUpdateBranch, onDeleteBranch,
   getStaffTarget, branchTargets, onUpdateTargets,
-  surveyResults = []
+  surveyResults = [],
+  equipmentList, setEquipmentList, pendingEquipment, onApproveEquipment, onRejectEquipment
 }) => {
   const [editingUserId, setEditingUserId] = useState<string | null>(null);
   const [editForm, setEditForm] = useState<{ position: string; branchName: string }>({ position: '트레이너', branchName: '' });
@@ -177,6 +183,11 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                 staffList={staffList}
                 getStaffTarget={getStaffTarget}
                 surveyResults={surveyResults}
+                equipmentList={equipmentList}
+                setEquipmentList={setEquipmentList}
+                pendingEquipment={pendingEquipment}
+                onApproveEquipment={onApproveEquipment}
+                onRejectEquipment={onRejectEquipment}
             />
         </div>
     );
